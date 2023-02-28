@@ -2,85 +2,60 @@
 
 _By Edward Lee_
 
-Amazon is a very large online retailing platform and has become increasingly important to the sales and distribution plans of brands in various categories. However, since Amazon is a platform that allows third-party selling, brands are subject to risks of counterfeiting or gray market selling. The top questions brands ask are:
+Amazon is a very large online retailing platform and has become increasingly important to the sales and distribution plans of brands in various categories. However, since Amazon is a platform that allows third-party selling, brands are subject to risks of counterfeiting or grey market selling. The top questions we are seeking to answer are:
 
-1) To what extent is the brand susceptible to the risk of counterfeiting and gray market selling?
-2) What factors increase the risk of becoming a target of gray market sellers?
+1) To what extent is the brand susceptible to the risk of counterfeiting and grey market selling?
+2) What factors increase the risk of becoming a target of grey market sellers?
 
 
 This Deliverable Includes:
 
--   The mapping tool
--   A set of Jupyter notebooks and executable scripts that output road closures on a Google Map
--   Training and testing datasets of collected web data
--   Guidance on future generations of the mapping tool
+-   A set of Jupyter notebooks and executable scripts that output probabilities of grey market activity
+-   Training and testing datasets
+-   Guidance on future generations of grey market identification
 
-And here's the final output of the map:
-
- ![Alt text](https://github.com/balak4/Optimizing-Evac-Routes/blob/master/data/3-final/Sample_map_output_image.png)   
 
 ## Methodology
 
-**Data Collection** |  _Sources: Here.com & Twitter_
-- **HERE.com** is a tech company that specializes in mapping and location services. The data were collected through filters that searched on geographic area and incident type.
-- **The Twitter API** offers developers a multitude of ways to engage with the platform. We utilized the Stream and Search functions of the API, in order to collect tweets and a variety of accompanying data points.
-	-   Search API - for “Historical” Tweets: allows for selective searching of tweets made up to one week in the past. We queried this history data using keywords and location tags to pull tweets that could be used to train a classification model.
-	-   Stream API: allows for the streaming of live tweets. This version of the mapping tool does not integrate the live feed functionality. However, we included executable code and instructions for querying the Stream API in future versions.
+**Data Collection** | [Google Drive Link](https://drive.google.com/drive/folders/1zvcqDbtZaCetQwsBum8EjB27g4tBdJ_G)
+In order to follow along with the notebooks of this project, please download the pickled dataset titled 'counter_dataset' (no extension) from the link and install to a './datasets/' folder on your local copy of this repository.
+
+**Data Cleaning** 
+- **Missing Data** While most features were complete, various features were missing anywhere from a couple hundred to over 95% of values. Various boolean features with a high frequency of missing data could be ignored, as they were non-interesting, non-distinguishing, and severely imbalanced. However, for others, such as ['offer_merchant'], missing values were imputed with 'Unavailable.' 
     
-**Classification Modeling to Determine Relevant Tweets**
-We analyzed the text data within each tweet, with the goal of identifying an “ideal” set of tweets. Criteria for “ideal” includes report of a road closure, and specific text references to street intersections where the road was closed. Each tweet in the sample set was labeled as 0, 1, or 2 with 2 being an “ideal” relevant tweet. The labeled tweets dataset was then used to train a classification model to recognize tweets that would be sufficiently descriptive of road closures:
+**Target Variable Assignment**
+We analyzed the text data within each review body, with a goal identifying "keywords" and "key phrases" used by reviewers after being the target of fraudulent or grey market activity. The process began by analyzing the appearance of the words "fake" and "counterfeit" in all reviews, across all ratings, and identifying instances when the unigrams were used with positive sentiment versus negative. While qualifiable words and phrases associated with grey market activity were found through vectorization, the criterion for adding them to our 'target assignment' list was ultimately subjective, with the primary assumption being that reviewers post truthful reviews, and that the Amazon platform would effectively filter out any non-credible review postings. Each review in the sample set was labeled as 0 or 1, with 1 indicating that the review was associated with grey selling. The labeled reviews dataset was then used to train a classification model to recognize what pre-review characteristics of a purchase would be sufficiently descriptive of illicit market activites.
 
-  
+**Synthetic Data Points**
+As with any dataset dealing with fraudulent or illicit activity, classes were severely imbalanced. In our sample, positive cases represented 0.48% of observations. SMOTEN and SMOTENC were used to populate our dataset with synthetic points, for classifications using continuous and combined features, respectively.
 
--   **0 - Not Relevant** (or uninformative)
-    _ex.: “MVHS will remain closed tomorrow due to concerns about road conditions.“_
+**Modeling**
+Our initial model, using Random Forest, performed excellently. To derive interpretations, we ran the same set of features through a Logistic Regression with no penalty. While analyzing coefficients, we noticed the most important features were number of “likes” or comments a review received. As individual review data was used to impute our target variables, a serious data leakage violation was detected. After dropping review-related features, and using only price, number of existing reviews, and number of images on a product display page, our model's performance fell but still appeared to be fitting rather well to unseen test data.
 
+The next stage of models included categorical features into our model. This model performed worse specifically on Recall, but outperformed the previous models on all other accounts, with a higher balanced-accuracy score. In respect to the collinearity between our categorical features, as well as the exploded dimensionality of one-hot-encoding our non-ordinal categories, it would be necessary to implement Principal Component Analysis. PCA tuning could not be succesfully executed, however, and will need to be addressed in future iterations. 
 
--   **1 - Relevant, Partial Road Closure Only**
-    _ex.: “Road construction. right lanes closed in #Pima on I-10 EB at Ruthrauff Rd”_
+## Findings
+Unable to provide concrete answers to our mission questions, the sum of our findings rather serve to illuminate the path to more effective, future iterations of our model.
 
--   **2 - Relevant, Full Closure with Complete Location Info**
-    _ex.:  “Manchester road off Wayne avenue is closed off by police. Giving traffic delivery updated as I see them”_
+For example, we learned that the more images there on a product display page, the more likely it is to be a target of grey market activity. Additionally, an increase in total reviews indicated a reduced chance of any illicit behaviors. However, these observations, however numeric their coefficients, are ultimately non-interesting observations that are victim to the chicken-and-egg dilemma. Is it the absence of bountiful images that makes a product a gray market target, or is it that gray market listings use unique product codes and that bad actors don't bother with the niceties of uploading images? Either way, gray market actors are constantly evolving, and today in 2023 one would be hard-pressed to find any product display page that is not chockful of sample images. 
 
-**Location Extraction from Tweets**
-Relevant tweets can be parsed to yield specific geographic keywords.
-
-**Mapping**
-Location data from Twitter and here.com are formatted and mapped using Google Maps API.
-
-Location data processed from Twitter posts is translated from strings that reference street intersections into latitude and longitude coordinates via the Geopy package.
-
-This data can be rendered to an embedded Google Maps display including, if present, label text for the road closures. Closures are rendered using Google Maps Directions API and thus automatically follow road contours, but limit the maximum number of closures that can be mapped at once.
-
-The output is an interactive Google Maps object with closures drawn onto relevant sections of road. Where available, a framework is in place to display simple labels to describe the road closures. Users can interact with the Maps object via mouse to zoom in and out and to scroll the view of the map.
+Similarly, we learned that items with a Prime guarantee are less likely to host gray-market activity, but even so its coefficient in a logistic regression is quite low and insignificant. Today, there is a much larger number of population of Prime users, as well as an expansion of products as well as sectors covered by Prime guarantees and deliveries. Modern data would certainly serve to be much more interesting than our sample.
 
 ## Future Iterations
-While the mapping tool is, in its current state, a working, end-to-end solution, we hope that it lays the framework for future versions that can elaborate on its base functionality. A complete list of guidelines for future iterations of this tool can be found [HERE](https://docs.google.com/document/d/1bDanbwegLJHpVv45dwmxIbQlV2FokHKHYS0JOE4anNs/edit?usp=sharing). _Also included are links for future developers to quickly find where to get required API credentials._
 
+Not only were certain features entirely nonexistent, amongst those available, there was a high frequency of missing data. The team is highly confident that features such as Minimum Authorized Price, SNS presence, and completed Merchant information would allow this project to be instantly improved and scalable. Acquiring more data would also serve the benefit of developing a clearer picture of the overall Amazon ecommerce landscape. The distribution of brands and categories in the working data sample was not representative of the true distribution of ecommerce categories on the Amazon platform. Having more data upon which we could develop a means of assigning our target, as well as identifying patterns would remove many limitations that we faced.
 
-## Sources
--   Documentation:
-	-   [Twitter Developer](https://developer.twitter.com/en/docs.html) 
-	-   [Tweepy API](http://docs.tweepy.org/en/v3.5.0/index.html) 
-	-   [HERE Developer](https://developer.here.com/)
-	- [Jupyter Gmaps](https://jupyter-gmaps.readthedocs.io/en/latest/)
-	-   [GeoPy](https://geopy.readthedocs.io/en/stable/) _(also referenced within the Jupyter Gmaps examples)_
+Improvements could also be made to target aassignment. By removing the restraints of computing on a local device, advanced text mining and NLP could be performed by exhaustively running from unigrams, bigrams, trigrams, etc. Working locally, challenges were caused by the dimensionality of a vectorized corpus, but computing in the cloud would remove these constraints.
+
+Technical limiations of working locally also stymied hyperparameter optimization. While tuning could be performed for ensemble models and simple logistic regressions, it could not be completed for PCA. Due to high collinearity between features such as brand and price, optimizing PCA would be a key component of developing future iterations of the model.
 
 
 -   Articles:
-	-   [http://www.dealingdata.net/2016/07/23/PoGo-Series-Tweepy/](http://www.dealingdata.net/2016/07/23/PoGo-Series-Tweepy/)
-	-   [https://www.youtube.com/watch?v=wlnx-7cm4Gg](https://www.youtube.com/watch?v=wlnx-7cm4Gg)
+	-   [https://www.brandalignment.com/shadow-hierarchy-grey-market//](https://www.brandalignment.com/shadow-hierarchy-grey-market//)
+	-   [https://greyscout.com/protect-your-brand-and-control-grey-market-activity-on-marketplaces/](https://greyscout.com/protect-your-brand-and-control-grey-market-activity-on-marketplaces/)
     
-
--   GitHub Repos:
-	-   [https://github.com/Celis1/Project-5](https://github.com/Celis1/Project-5) _(project repo, previous DSI cohort)_
 
 ## Team
 
-Brian Brakefield | [https://linkedin.com/in/brianbrakefield/](https://linkedin.com/in/brianbrakefield/)
+Edward Lee | [https://linkedin.com/in/edward-yh-lee/](https://linkedin.com/in/edward-yh-lee/)
 
-Veronica Giannotta | [https://www.linkedin.com/in/vgiannotta/](https://www.linkedin.com/in/vgiannotta/)
-
-Bala Krishnamoorthy | [https://www.linkedin.com/in/balakrishnamoorthy/](https://www.linkedin.com/in/balakrishnamoorthy/)
-
-Amy Taylor | [https://www.linkedin.com/in/amy-taylor-24999574/](https://www.linkedin.com/in/amy-taylor-24999574/)
